@@ -25,6 +25,14 @@
                                   :email => :email },
     :defaults                => { :country => "USA" },
     :constraint_regexp_map   => { /code/ => :zip },
-    :untaint_all_constraints => true
+    :untaint_all_constraints => true,
+    :msgs => {
+      :prefix  => "err_",
+      :invalid => "value is invalid",
+      :missing => "value is missing",
+      :format  => "%s",
+      :constraints => {
+        :age => "please enter numeric"}
+    }
   }
 }

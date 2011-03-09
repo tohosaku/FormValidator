@@ -6,7 +6,7 @@ class TestValidator < Test::Unit::TestCase
     @form = {
       "first_name" => "Travis",
       "last_name"  => "whitton",
-      "age"        => "22",
+      "age"        => "2a",
       "home_phone" => "home phone: (123) 456-7890",
       "fax"        => "some bogus fax",
       "street"     => "111 NW 1st Street",
@@ -24,7 +24,7 @@ class TestValidator < Test::Unit::TestCase
   def test_valid
     res = @fv.validate(@form, :customer)
     assert_equal(
-      ["age", "check_no", "city", "country", "email", "first_name",
+      ["check_no", "city", "country", "email", "first_name",
        "home_phone", "last_name", "password", "paytype", "state",
        "street", "zipcode"],
       @fv.valid.keys.sort
@@ -34,12 +34,15 @@ class TestValidator < Test::Unit::TestCase
 
   def test_invalid
     @fv.validate(@form, :customer)
-    assert_equal({"fax"=>["american_phone"]}, @fv.invalid)
+    assert_equal({"fax"=>["american_phone"],"age"=>["/^1?\\d{1,2}$/"]}, @fv.invalid)
+    assert_equal(@fv.msgs[:err_fax], "value is invalid")
+    assert_equal(@fv.msgs[:err_age], "please enter numeric")
   end
 
   def test_missing
     @fv.validate(@form, :customer)
     assert_equal(["password_confirmation"], @fv.missing)
+    assert_equal(@fv.msgs[:err_password_confirmation], "value is missing")
   end
 
   def test_unknown

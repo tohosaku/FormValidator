@@ -59,6 +59,34 @@ class FormValidator
     @invalid_fields
   end
 
+  DEFAULT_MSG = {
+    "prefix"  => "",
+    "missing" => "Missing",
+    "invalid" => "Invalid",
+    "format"  => '<span style="color:red;font-weight:bold" class="dfv_errors">* %s</span>',
+    "constraints" => { },
+    "invalid_separator" => ' '
+  }
+
+  def msgs
+    msg = {}
+    DEFAULT_MSG.each{|key,value| msg[key] = @profile[:msgs][key] || value}
+
+    _messages = {}
+
+    missing.each do |field|
+      key = msg["prefix"] + field.to_s
+      _messages[key.intern] = msg["format"] % msg["missing"]
+    end
+
+    invalid.each do |field, name|
+      key = msg["prefix"] + field.to_s
+      _messages[key.intern] = msg["format"] % (msg["constraints"][field] || msg["invalid"])
+    end
+
+    _messages
+  end
+
   private
 
   # Load profile with a hash describing valid input.
@@ -156,7 +184,7 @@ class FormValidator
         :dependencies, :dependency_groups, :defaults, :filters,
         :field_filters, :field_filter_regexp_map,
         :missing_optional_valid, :validator_packages,
-        :untaint_constraint_fields, :untaint_all_constraints ]
+        :untaint_constraint_fields, :untaint_all_constraints, :msgs ]
 
     profile.keys.map do |key|
       unless valid_profile_keys.include?(key)
