@@ -76,7 +76,7 @@ class FormValidator
 
     missing.each do |field|
       key = msg["prefix"] + field.to_s
-      _messages[key.intern] = msg["format"] % msg["missing"]
+      _messages[key.intern] = msg["format"] % (msg["constraints"][field] || msg["missing"])
     end
 
     invalid.each do |field, name|
