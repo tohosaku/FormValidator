@@ -70,7 +70,11 @@ class FormValidator
 
   def msgs
     msg = {}
-    DEFAULT_MSG.each{|key,value| msg[key] = @profile[:msgs][key] || value}
+    if @profile[:msgs]
+      DEFAULT_MSG.each{|key,value| msg[key] = @profile[:msgs][key] || value}
+    else
+      @profile[:msgs] = DEFAULT_MSG
+    end
 
     _messages = {}
 
