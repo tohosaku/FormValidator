@@ -1,5 +1,5 @@
 require "test/unit"
-require "../formvalidator"
+require "../lib/formvalidator"
 
 class TestValidator < Test::Unit::TestCase
   def setup
