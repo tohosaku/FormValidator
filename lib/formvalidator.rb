@@ -527,7 +527,7 @@ class FormValidator
     def constraints
       return nil unless Hash === @profile[:constraints]
       @profile[:constraints].each do |key,constraint|
-        do_constraint(key, [constraint].flatten) unless @form[key].to_s.empty?
+        do_constraint(key, [constraint].flatten) unless @form[key.intern].to_s.empty?
       end
     end
   end # module InputProfile
