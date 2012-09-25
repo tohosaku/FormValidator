@@ -205,7 +205,7 @@ class FormValidator
     def required
       Array(@profile[:required]).each do |field|
         @required_fields << field
-        @missing_fields.push(field) if @form[field].to_s.empty?
+        @missing_fields.push(field) if @form[field.intern].to_s.empty?
       end
       @missing_fields
     end
@@ -557,8 +557,8 @@ class FormValidator
      # Find unknown fields and delete them from the form.
     def delete_unknown
       @unknown_fields =
-        @form.keys - @required_fields - @optional_fields - @require_some_fields
-      @unknown_fields.each {|field| @form.delete(field)}
+        @form.keys.map{|field| field.to_s} - @required_fields - @optional_fields - @require_some_fields
+      @unknown_fields.each {|field| @form.delete(field.intern)}
     end
 
     # Indicates if @form[key] is scheduled to be untainted.
