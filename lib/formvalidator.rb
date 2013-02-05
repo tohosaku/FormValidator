@@ -11,6 +11,26 @@ class FormValidator
       @profile_file = nil
     end
   end
+  
+  PROFILE_KEYS1 = [
+    :field_filters ,
+    :filters ,
+    :field_filter_regexp_map ,
+    :required ,
+    :required_regexp ,
+    :require_some ,
+    :optional ,
+    :optional_regexp
+    ]
+  PROFILE_KEYS2 = [
+    :dependencies ,
+    :dependency_groups ,
+    :defaults ,
+    :untaint_constraint_fields ,
+    :untaint_all_constraints ,
+    :constraint_regexp_map ,
+    :constraints
+  ]
 
   # This method runs all tests specified inside of profile on form.
   # It sets the valid, invalid, missing and unknown instance variables
@@ -18,23 +38,16 @@ class FormValidator
   # or false otherwise.
   def validate(form, profile)
     setup(form, profile)
-    field_filters
-    filters
-    field_filter_regexp_map
-    required
-    required_regexp
-    require_some
-    optional
-    optional_regexp
+    PROFILE_KEYS1.each do |key|
+      self.send(key, @profile[key]) if @profile[key]
+    end
+    
     delete_empty
     delete_unknown
-    dependencies
-    dependency_groups
-    defaults
-    untaint_constraint_fields
-    untaint_all_constraints
-    constraint_regexp_map
-    constraints
+    
+    PROFILE_KEYS2.each do |key|
+      self.send(key, @profile[key]) if @profile[key]
+    end
     !(missing.length > 0 || invalid.length > 0 || unknown.length > 0)
   end
 
@@ -205,8 +218,8 @@ class FormValidator
     # reported as missing.
     #
     #    :required => [:name, :age, :phone]
-    def required
-      Array(@profile[:required]).each do |field|
+    def required(args)
+      args.each do |field|
         @required_fields << field
         @missing_fields.push(field) if @form[field.to_s].to_s.empty?
       end
@@ -221,8 +234,8 @@ class FormValidator
     # deleted from the valid hash.
     #
     #     :optional => [:name, :age, :phone]
-    def optional
-      Array(@profile[:optional]).each do |field|
+    def optional(args)
+      args.each do |field|
         @optional_fields << field unless @optional_fields.include?(field)
       end
       @optional_fields
@@ -235,15 +248,13 @@ class FormValidator
     # missing field list.
     #
     #     :required_regexp => /name/
-    def required_regexp
+    def required_regexp(args)
       @form.keys.each do |elem|
-        Array(@profile[:required_regexp]).each do |regexp|
-          regexp = Regexp.new(regexp)
+          regexp = Regexp.new(args)
           if elem =~ regexp
             @required_fields << elem unless @required_fields.include?(elem)
             @missing_fields.push(elem) if @form[elem].to_s.empty?
           end
-        end
       end
       @missing_fields
     end
@@ -254,15 +265,13 @@ class FormValidator
     # of optional fields.
     #
     #     :required_regexp => /name/
-    def optional_regexp
+    def optional_regexp(args)
       @form.keys.each do |elem|
-        Array(@profile[:optional_regexp]).each do |regexp|
-          regexp = Regexp.new(regexp)
+          regexp = Regexp.new(args)
           if elem =~ regexp
             @optional_fields << elem unless @optional_fields.include?(elem)
           end
         end
-      end
       @optional_fields
     end
 
@@ -274,11 +283,11 @@ class FormValidator
     # fields.
     #
     #     :require_some => { :check_or_cc => [1, %w{cc_num check_no}] }
-    def require_some
-      return nil unless Hash === @profile[:require_some]
-      @profile[:require_some].keys.each do |group|
+    def require_some(args)
+      return nil unless Hash === args
+      args.keys.each do |group|
         enough = 0
-        num_to_require, fields = @profile[:require_some][group]
+        num_to_require, fields = args[group]
         fields.each do |field|
           unless @require_some_fields.include?(field)
             @require_some_fields << field
@@ -295,10 +304,11 @@ class FormValidator
     # Fills in defaults but does not override required fields.
     #
     #     :defaults => { :country => "USA" }
-    def defaults
-      return nil unless Hash === @profile[:defaults]
+    def defaults(args)
+      return nil unless Hash === args
       keys_defaulted = []
-      @profile[:defaults].each do |key,value|
+      args.each do |key,value|
+        
         if @form[key].to_s.empty?
           @form[key] = value.to_s
           keys_defaulted.push(key)
@@ -322,9 +332,9 @@ class FormValidator
     #                                    }}
     #
     #     :dependencies => { :street => [ :city, :state, :zipcode ] }
-    def dependencies
-      return nil unless Hash === @profile[:dependencies]
-      @profile[:dependencies].each do |field,deps|
+    def dependencies(args)
+      return nil unless Hash === args
+      args.each do |field,deps|
         if Hash === deps
           deps.keys.each do |key|
             if @form[field].to_s == key
@@ -350,14 +360,14 @@ class FormValidator
     # all must be filled.
     #
     #     :dependency_groups => { :password_group => [ :pass1, :pass2 ] }
-    def dependency_groups
-      return nil unless Hash === @profile[:dependency_groups]
+    def dependency_groups(args)
+      return nil unless Hash === args
       require_all = false
-      @profile[:dependency_groups].values.each do |val|
+      args.values.each do |val|
         require_all = true unless val.select{|group| @form[group]}.empty?
       end
       if require_all
-        @profile[:dependency_groups].values.each do |deps|
+        args.values.each do |deps|
           deps.each do |dep|
             @missing_fields.push(dep) if @form[dep].to_s.empty?
           end
@@ -371,8 +381,8 @@ class FormValidator
     # Specified filters will be applied to ALL fields.
     #
     #     :filters => :strip
-    def filters
-      Array(@profile[:filters]).each do |filter|
+    def filters(args)
+      Array(args).each do |filter|
         if respond_to?("filter_#{filter}".intern)
           @form.keys.each do |field|
             # If a key has multiple elements, apply filter to each element
@@ -399,8 +409,8 @@ class FormValidator
     # See FormValidator::Filters for a list of builtin filters.
     #
     #     :field_filters => { :home_phone => :phone }
-    def field_filters
-      Array(@profile[:field_filters]).each do |field,filters|
+    def field_filters(args)
+      args.each do |field,filters|
         Array(filters).each do |filter|
           if respond_to?("filter_#{filter}".intern)
             # If a key has multiple elements, apply filter to each element
@@ -424,8 +434,8 @@ class FormValidator
     # Applies one or more filters to fields matching regexp.
     #
     #     :field_filter_regexp_map => { /name/ => :capitalize }
-    def field_filter_regexp_map
-      Array(@profile[:field_filter_regexp_map]).each do |re,filters|
+    def field_filter_regexp_map(args)
+      args.each do |re,filters|
         Array(filters).each do |filter|
           if respond_to?("filter_#{filter}".intern)
             @form.keys.select {|key| key =~ re}.each do |match|
@@ -453,8 +463,8 @@ class FormValidator
     # This is overridden by untaint_constraint_fields.
     #
     #     :untaint_all_constraints => true
-    def untaint_all_constraints
-      if @profile[:untaint_all_constraints]
+    def untaint_all_constraints(args)
+      if args
         @untaint_all = true unless @profile[:untaint_constraint_fields]
       end
     end
@@ -465,8 +475,8 @@ class FormValidator
     # of the constraint check it passes, and it's value will be untainted.
     #
     #     :untaint_constraint_fields => %w{ name age }
-    def untaint_constraint_fields
-      Array(@profile[:untaint_constraint_fields]).each do |field|
+    def untaint_constraint_fields(args)
+      Array(args).each do |field|
         @untaint_fields.push(field)
       end
     end
@@ -478,9 +488,9 @@ class FormValidator
     # element will be set to the result of the constraint method.
     #
     #     :constraint_regexp_map => { /code/ => :zip }
-    def constraint_regexp_map
-      return nil unless Hash === @profile[:constraint_regexp_map]
-      @profile[:constraint_regexp_map].each do |re,constraint|
+    def constraint_regexp_map(args)
+      return nil unless Hash === args
+      args.each do |re,constraint|
         re = Regexp.new(re)
         @form.keys.select {|key| key =~ re}.each do |match|
           unless @form[match].to_s.empty?
@@ -523,9 +533,9 @@ class FormValidator
     #     :constraints => { :zipcode    => [:zip, /^\d+/],
     #                       :fax        => :american_phone,
     #                       :email_addr => :email }
-    def constraints
-      return nil unless Hash === @profile[:constraints]
-      @profile[:constraints].each do |key,constraint|
+    def constraints(args)
+      return nil unless Hash === args
+      args.each do |key,constraint|
         do_constraint(key, [constraint].flatten) unless @form[key.to_s].to_s.empty?
       end
     end
