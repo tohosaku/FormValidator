@@ -208,7 +208,7 @@ class FormValidator
     def required
       Array(@profile[:required]).each do |field|
         @required_fields << field
-        @missing_fields.push(field) if @form[field.intern].to_s.empty?
+        @missing_fields.push(field) if @form[field.to_s].to_s.empty?
       end
       @missing_fields
     end
@@ -526,7 +526,7 @@ class FormValidator
     def constraints
       return nil unless Hash === @profile[:constraints]
       @profile[:constraints].each do |key,constraint|
-        do_constraint(key, [constraint].flatten) unless @form[key.intern].to_s.empty?
+        do_constraint(key, [constraint].flatten) unless @form[key.to_s].to_s.empty?
       end
     end
   end # module InputProfile
@@ -561,7 +561,7 @@ class FormValidator
     def delete_unknown
       @unknown_fields =
         @form.keys.map{|field| field.to_s} - @required_fields - @optional_fields - @require_some_fields
-      @unknown_fields.each {|field| @form.delete(field.intern)}
+      @unknown_fields.each {|field| @form.delete(field.to_s)}
     end
 
     # Indicates if @form[key] is scheduled to be untainted.
