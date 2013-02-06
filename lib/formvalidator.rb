@@ -374,22 +374,18 @@ class FormValidator
     #     :field_filters => { :home_phone => :phone }
     def field_filters(args)
       args.each do |field,filters|
-        Array(filters).each do |filter|
-          if respond_to?("filter_#{filter}".intern)
-            # If a key has multiple elements, apply filter to each element
-            if Array(@form[field]).length > 1
-              @form[field].each_index do |i|
-                elem = @form[field][i]
-                @form[field][i] = self.send("filter_#{filter}".intern, elem)
-              end
-            else
-              @form[field] =
-                self.send("filter_#{filter}".intern, @form[field].to_s)
+        [filters].flatten.each do |filter|
+          next unless respond_to?("filter_#{filter}".intern)
+          # If a key has multiple elements, apply filter to each element
+          if [@form[field]].flatten.length > 1
+            @form[field].map!{|e| self.send("filter_#{filter}".intern, e)}
+          else
+            unless @form[field].to_s.empty?
+              @form[field] = self.send("filter_#{filter}".intern, @form[field].to_s)
             end
           end
         end
       end
-      @form
     end
 
     # Takes a regexp.
