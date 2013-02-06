@@ -395,24 +395,20 @@ class FormValidator
     #     :field_filter_regexp_map => { /name/ => :capitalize }
     def field_filter_regexp_map(args)
       args.each do |re,filters|
-        Array(filters).each do |filter|
-          if respond_to?("filter_#{filter}".intern)
-            @form.keys.select {|key| key =~ re}.each do |match|
-              # If a key has multiple elements, apply filter to each element
-              if Array(@form[match]).length > 1
-                @form[match].each_index do |i|
-                  elem = @form[match][i]
-                  @form[match][i] = self.send("filter_#{filter}".intern, elem)
-                end
-              else
-                @form[match] =
-                  self.send("filter_#{filter}".intern, @form[match].to_s)
+        [filters].flatten.each do |filter|
+          next unless respond_to?("filter_#{filter}".intern)
+          @form.keys.select {|key| key =~ re}.each do |match|
+            # If a key has multiple elements, apply filter to each element
+            if [@form[match]].flatten.length > 1
+              @form[match].map!{|e| self.send("filter_#{filter}".intern, e)}
+            else
+              unless @form[match].to_s.empty?
+                @form[match] = self.send("filter_#{filter}".intern, @form[match].to_s)
               end
             end
           end
         end
       end
-      @form
     end
 
     # Takes true.
