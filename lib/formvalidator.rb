@@ -337,19 +337,12 @@ class FormValidator
     #
     #     :dependency_groups => { :password_group => [ :pass1, :pass2 ] }
     def dependency_groups(args)
-      return nil unless Hash === args
-      require_all = false
+      return nil unless args.is_a?(Hash)
       args.values.each do |val|
-        require_all = true unless val.select{|group| @form[group]}.empty?
+        next unless val.any?{|e| @form[e.to_s] }
+        miss = [val].flatten.select{|dep| @form[dep.to_s].to_s.empty? }
+        @missing_fields.concat(miss).uniq!
       end
-      if require_all
-        args.values.each do |deps|
-          deps.each do |dep|
-            @missing_fields.push(dep) if @form[dep].to_s.empty?
-          end
-        end
-      end
-      @missing_fields
     end
 
     # Takes an array, symbol, or string.
