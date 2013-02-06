@@ -314,21 +314,16 @@ class FormValidator
     #
     #     :dependencies => { :street => [ :city, :state, :zipcode ] }
     def dependencies(args)
-      return nil unless Hash === args
+      return nil unless args.is_a?(Hash)
       args.each do |field,deps|
-        if Hash === deps
-          deps.keys.each do |key|
-            if @form[field].to_s == key
-              Array(deps[key]).each do |dep|
-                  @missing_fields.push(dep) if @form[dep].to_s.empty?
-              end
-            end
+        if deps.is_a?(Hash)
+          deps.each do |key, more_deps|
+            next unless @form[field.to_s].to_s == key.to_s
+            @missing_fields.concat([more_deps].flatten.select{|d| @form[d.to_s].to_s.empty? }).uniq!
           end
         else
-          if not @form[field].to_s.empty?
-            Array(deps).each do |dep|
-              @missing_fields.push(dep) if @form[dep].to_s.empty?
-            end
+          unless @form[field].to_s.empty?
+            @missing_fields.concat([deps].flatten.select{|dep| @form[dep.to_s].to_s.empty? }).uniq!
           end
         end
       end
