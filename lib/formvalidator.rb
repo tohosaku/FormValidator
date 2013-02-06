@@ -219,11 +219,9 @@ class FormValidator
     #
     #    :required => [:name, :age, :phone]
     def required(args)
-      args.each do |field|
-        @required_fields << field
-        @missing_fields.push(field) if @form[field.to_s].to_s.empty?
-      end
-      @missing_fields
+      fields = [args].flatten.map{|e| e.to_s}
+      @required_fields.concat(fields).uniq!
+      @missing_fields.concat(fields.select{|s| @form[s].to_s.empty? })
     end
 
     # Takes an array, symbol, or string.
@@ -235,10 +233,7 @@ class FormValidator
     #
     #     :optional => [:name, :age, :phone]
     def optional(args)
-      args.each do |field|
-        @optional_fields << field unless @optional_fields.include?(field)
-      end
-      @optional_fields
+      @optional_fields.concat([args].flatten.map{|e| e.to_s}).uniq!
     end
 
     # Takes a regular expression.
@@ -249,14 +244,9 @@ class FormValidator
     #
     #     :required_regexp => /name/
     def required_regexp(args)
-      @form.keys.each do |elem|
-          regexp = Regexp.new(args)
-          if elem =~ regexp
-            @required_fields << elem unless @required_fields.include?(elem)
-            @missing_fields.push(elem) if @form[elem].to_s.empty?
-          end
-      end
-      @missing_fields
+      regexp = Regexp.new(args)
+      @required_fields.concat(@form.keys.select{|e| e =~ regexp}).uniq!
+      @missing_fields.concat(@form.keys.select{|e| e =~ regexp && @form[e].to_s.empty?})
     end
 
     # Takes a regular expression.
@@ -266,13 +256,8 @@ class FormValidator
     #
     #     :required_regexp => /name/
     def optional_regexp(args)
-      @form.keys.each do |elem|
-          regexp = Regexp.new(args)
-          if elem =~ regexp
-            @optional_fields << elem unless @optional_fields.include?(elem)
-          end
-        end
-      @optional_fields
+      regexp = Regexp.new(args)
+      @optional_fields.concat(@form.keys.select{|e| e =~ regexp}).uniq!
     end
 
     # Takes a hash with each key pointing to an array.
