@@ -269,19 +269,15 @@ class FormValidator
     #
     #     :require_some => { :check_or_cc => [1, %w{cc_num check_no}] }
     def require_some(args)
-      return nil unless Hash === args
-      args.keys.each do |group|
-        enough = 0
-        num_to_require, fields = args[group]
-        fields.each do |field|
-          unless @require_some_fields.include?(field)
-            @require_some_fields << field
-          end
-          enough += 1 unless @form[field].to_s.empty?
+      return nil unless args.is_a?(Hash)
+      args.each do |group, condition|
+        num_to_require, fields = condition
+        @require_some_fields.concat(fields).uniq!
+        enough = fields.select{|f| !@form[f].to_s.empty? }.length
+        unless (enough >= num_to_require)
+          @missing_fields << group.to_s
         end
-        @missing_fields.push(group.to_s) unless (enough >= num_to_require)
       end
-      @missing_fields
     end
 
     # Takes a hash.
@@ -290,12 +286,12 @@ class FormValidator
     #
     #     :defaults => { :country => "USA" }
     def defaults(args)
-      return nil unless Hash === args
+      return nil unless args.is_a?(Hash)
       keys_defaulted = []
       args.each do |key,value|
         
-        if @form[key].to_s.empty?
-          @form[key] = value.to_s
+        if @form[key.to_s].to_s.empty?
+          @form[key.to_s] = value.to_s
           keys_defaulted.push(key)
         end
       end
