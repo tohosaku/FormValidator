@@ -1,0 +1,106 @@
+== 目的
+
+FormValidator は、フォーム検証のためのライブラリで、 Perl の Data::FormValidator モジュールからの派生物です。
+Web アプリケーションを書くとき、もっとも退屈な、しかし重要な仕事は、ユーザーの入力 (通常、HTMLのフォームを経由して投稿されてきます) を検証することです。
+入力必須の項目が存在し、すべての項目が有効なデータであることを確認しなくてはなりません。(電話番号に対する入力は、電話番号のように見えるか？E-Mailアドレスはまともなものか？単純なフォームでは、これはたいした問題ではありません。しかしフォームが複雑になるにつれて、それらをコーディングしていくとすると、この作業は本当にうんざりさせられるような退屈なものになります。
+
+FormValidator は、プロファイルを定義させます。プロファイルは、必要とされる項目とそのフォーマットを宣言します。ユーザーの入力を検証する準備ができたら FormValidator にユーザーの入力に適用するプロファイルを知らせます。そうすると、即座に、入力ごとに「有効」「入力なし」「不正」「未知」の項目が分かります。インスタンス変数には、検証の結果の実行結果が入っています。そのためテストしたもののうちどの項目が失敗したのかが分かります。
+
+過去、7年間の間、FormValidator は、現実の世界で厳重にテストされてきました。FormValidator は、Sinatra Web フレームワークとともに、フォームの検証の目的で仕様されてきました。そして、Web の世界の外では、environmental instrument (環境計測器？) のデータを検証してきました。また、MUD フームワークの中でのデータ検証にも使われてきました。これらの現実世界のテストからの結論としては、さまざまな検証の要求に対し十分に昨日し、致命的な問題とは無縁だろうということです。
+
+== 入力プロファイルの仕様
+
+FormValidator オブジェクトを作るには、以下のうち一つの操作を行います。
+
+    # プロファイルデータはハッシュとして読み込まれる。
+    fv = FormValidator.new
+    # プロファイルデータは、 someprofile.rb から読みこまれる。
+    fv = FormValidator.new("someprofile.rb")
+
+最初のケースでは、プロファイルのハッシュとフォームのハッシュは、validateメソッドに対して指定しなくてはなりません(以下を参照)。2番目のケースでは、入力プロファイルは、somefile.rb から読み込まれます。そして どのプロファイルをフォームに対して適用するかを指定するためのラベルをvalidateメソッドに与えます。わかりづらいようなら以下の使用方法のセクションを見てもらえれば分かるようになるでしょう。
+
+プロファイルで使用できる全てのメソッドについては、FormValidator::InputProfile を見てください。
+
+== インストール
+
+    $ gem install formvalidator
+
+== 使用方法
+
+一番簡単で一般的な使用方法は、プロファイルをハッシュの中で指定し、FormValidator::validate メソッドに Formデータとともに渡すというものです。
+
+=== 単純なフォームの検証
+
+    require "formvalidator"
+    
+    form = {
+      "phone" => "home phone: (123) 456-7890",
+      "zip"   => "32608-1234",
+      "rogue" => "いくつかの未知の項目"
+    }
+    
+    profile = {
+      :required      => [:name, :zip],
+      :optional      => :phone,
+      :filters       => :strip,
+      :field_filters => { :phone => :phone },
+      :constraints   => {
+        :phone => :american_phone,
+        :zip   => [
+          :zip,
+          {
+            :name       => "pure_digit",
+            :constraint => /^\d+$/
+          }
+        ]
+      }
+    }
+    
+    fv = FormValidator.new
+    fv.validate(form, profile)
+
+    fv.valid   # <== {"phone"=>"  (123) 456-7890"}
+    fv.invalid # <== {"zip"=>["pure_digit"]}
+    fv.missing # <== ["name"]
+    fv.unknown # <== ["rogue"]
+
+=== ファイルから検証する
+
+    require "formvalidator"
+    
+    form = {
+      "phone" => "home phone: (123) 456-7890",
+      "zip"   => "32608-1234",
+      "rogue" => "いくつかの未知の項目"
+    }
+    
+    fv = FormValidator.new("profile_file.rb")
+    fv.validate(form, :testinfo)
+    
+    profile_file.rb の内容
+    
+    {
+    :testinfo =>
+      {
+        :required    => [:name, :zip],
+        :optional    => [:arr, :phone],
+        :filters     => :strip,
+        :field_filters => { :phone => :phone },
+        :constraints => {
+          :phone => :american_phone,
+          :zip => [
+                    :zip,
+                    {
+                      :name       => "pure_digit",
+                      :constraint => /^\d+$/
+                    }
+                  ]
+        }
+      }
+    }
+
+プロファイルを別のファイルに配置しするときは、それぞれのプロファイルに、たとえば上の例の testinfo のようなラベルでタグ付けをしなければいけません。これで1つのファイルに保管している複数のプロファイルを簡単にとりだすことができます。
+
+== 謝辞
+
+FormValidator は、Travis Whitton によって書かれました。Francis J. Lacoste によって書かれた Perl の Data::FormValidator をもとにしています。クレジットカードの検証部分は、MiniVend から取り出して改造したものです。MiniVend は、Bruce Albrecht によって書かれました。
