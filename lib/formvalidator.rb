@@ -38,6 +38,10 @@ class FormValidator
   # or false otherwise.
   def validate(form, profile)
     setup(form, profile)
+    
+    # true if return results as symbole
+    @result_symbol = @profile[:result_symbol]
+    
     PROFILE_KEYS1.each do |key|
       self.send(key, @profile[key]) if @profile[key]
     end
@@ -53,22 +57,42 @@ class FormValidator
 
   # Returns a distinct list of missing fields.
   def missing
-    @missing_fields.uniq.sort
+    unless @result_symbol
+      @missing_fields.uniq.sort
+    else
+      @missing_fields.uniq.sort.map{|s| s.intern}
+    end
   end
   
   # Returns a distinct list of unknown fields.
   def unknown
-    (@unknown_fields - @invalid_fields.keys).uniq.sort
+    unless @result_symbol
+      (@unknown_fields - @invalid_fields.keys).uniq.sort
+    else
+      (@unknown_fields - @invalid_fields.keys).uniq.sort.map{|s| s.intern}
+    end
   end
 
   # Returns a hash of valid fields and their associated values
   def valid
-    @form
+    unless @result_symbol
+      @form
+    else
+      v = {}
+      @form.each{|key,val| v[key.intern] = val }
+      v
+    end
   end
 
   # Returns a hash of invalid fields and their failed constraints
   def invalid
-    @invalid_fields
+    unless @result_symbol
+      @invalid_fields
+    else
+      v = {}
+      @invalid_fields.each{|key,val| v[key.intern] = val }
+      v
+    end
   end
 
   DEFAULT_MSG = {
