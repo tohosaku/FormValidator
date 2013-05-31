@@ -11,7 +11,7 @@ class FormValidator
       @profile_file = nil
     end
   end
-  
+
   PROFILE_KEYS1 = [
     :field_filters ,
     :filters ,
@@ -38,10 +38,10 @@ class FormValidator
   # or false otherwise.
   def validate(form, profile)
     setup(form, profile)
-    
+
     # true if return results as symbole
-    @result_symbol = @profile[:result_symbol]
-    
+    @result_symbol = true if @profile[:result_symbol]
+
     PROFILE_KEYS1.each do |key|
       self.send(key, @profile[key]) if @profile[key]
     end
@@ -225,7 +225,7 @@ class FormValidator
         :dependencies, :dependency_groups, :defaults, :filters,
         :field_filters, :field_filter_regexp_map,
         :missing_optional_valid, :validator_packages,
-        :untaint_constraint_fields, :untaint_all_constraints, :msgs ]
+        :untaint_constraint_fields, :untaint_all_constraints, :msgs, :result_symbol]
 
     profile.keys.map do |key|
       unless valid_profile_keys.include?(key)
