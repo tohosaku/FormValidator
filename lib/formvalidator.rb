@@ -105,26 +105,27 @@ class FormValidator
   }
 
   def msgs
-    msg = {}
+    conf = {}
     if @profile[:msgs]
-      DEFAULT_MSG.each{|key,value| msg[key] = @profile[:msgs][key] || value}
+      DEFAULT_MSG.each{|key,value| conf[key] = @profile[:msgs][key.to_s] || value}
     else
-      @profile[:msgs] = DEFAULT_MSG
+      conf = DEFAULT_MSG
     end
 
-    _messages = {}
+    messages = {}
 
     missing.each do |field|
-      key = msg["prefix"] + field.to_s
-      _messages[key.intern] = msg["format"] % (msg["constraints"][field] || msg["missing"])
+      key = conf["prefix"] + field.to_s
+      messages[key.intern] = conf["format"] % (conf["constraints"][field] || conf["missing"])
     end
 
     invalid.each do |field, name|
-      key = msg["prefix"] + field.to_s
-      _messages[key.intern] = msg["format"] % (msg["constraints"][field] || msg["invalid"])
+      key    = conf["prefix"] + field.to_s
+      reason = name.map{|c| conf["constraints"][c] || conf["invalid"] }.join(conf["invalid_separator"])
+      messages[key.intern] = conf["format"] % reason
     end
 
-    _messages
+    messages
   end
 
   private
