@@ -52,6 +52,14 @@ class FormValidator
     PROFILE_KEYS2.each do |key|
       self.send(key, @profile[key]) if @profile[key]
     end
+
+    if @result_symbol
+      @form.each do |key,val|
+        @form[key.intern] = val
+        @form.delete(key)
+      end
+    end
+
     !(missing.length > 0 || invalid.length > 0 || unknown.length > 0)
   end
 
@@ -149,6 +157,10 @@ class FormValidator
       @profile = @profiles[profile]
     end
     check_profile_syntax(@profile)
+
+    # strip form_data (sinatra params)
+    form_data.reject!{|key,val| !key.instance_of?(String)}
+
     @form = form_data
     @profile = convert_profile(@profile)
   end

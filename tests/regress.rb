@@ -34,7 +34,7 @@ class TestValidator < Test::Unit::TestCase
 
   def test_invalid
     @fv.validate(@form, :customer)
-    assert_equal({"fax"=>["american_phone"],"age"=>["/^1?\\d{1,2}$/"]}, @fv.invalid)
+    assert_equal({"fax"=>["american_phone"],"age"=>["age"]}, @fv.invalid)
     assert_equal(@fv.msgs[:err_fax], "value is invalid")
     assert_equal(@fv.msgs[:err_age], "please enter numeric")
   end

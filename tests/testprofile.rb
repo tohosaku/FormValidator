@@ -19,7 +19,7 @@
                                   :cc_no      => :digit
                                 },
     :field_filter_regexp_map => { /name/ => :capitalize },
-    :constraints             => { :age   => /^1?\d{1,2}$/,
+    :constraints             => { :age   => {:name => :age, :constraint => /^1?\d{1,2}$/},
                                   :fax   => :american_phone,
                                   :state => :state_or_province,
                                   :email => :email },
