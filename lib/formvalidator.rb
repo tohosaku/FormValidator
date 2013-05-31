@@ -388,17 +388,9 @@ class FormValidator
     #
     #     :filters => :strip
     def filters(args)
-      [args].flatten.each do |filter|
-        next unless respond_to?("filter_#{filter}".intern)
-        @form.keys.each do |field|
-          # If a key has multiple elements, apply filter to each element
-          if [@form[field]].flatten.length > 1
-            @form[field].map!{|e| self.send("filter_#{filter}".intern, e) }
-          else
-            unless @form[field].to_s.empty?
-              @form[field] = self.send("filter_#{filter}".intern, @form[field].to_s)
-            end
-          end
+      convert_filters(args) do |filter_method|
+        @form.each_key do |field|
+          @form[field] = apply_filter(@form[field], filter_method)
         end
       end
     end
@@ -410,17 +402,9 @@ class FormValidator
     #
     #     :field_filters => { :home_phone => :phone }
     def field_filters(args)
-      args.each do |field,filters|
-        [filters].flatten.each do |filter|
-          next unless respond_to?("filter_#{filter}".intern)
-          # If a key has multiple elements, apply filter to each element
-          if [@form[field]].flatten.length > 1
-            @form[field].map!{|e| self.send("filter_#{filter}".intern, e)}
-          else
-            unless @form[field].to_s.empty?
-              @form[field] = self.send("filter_#{filter}".intern, @form[field].to_s)
-            end
-          end
+      args.each do |field, filters|
+        convert_filters(filters) do |filter_method|
+          @form[field] = apply_filter(@form[field], filter_method)
         end
       end
     end
@@ -432,19 +416,30 @@ class FormValidator
     #     :field_filter_regexp_map => { /name/ => :capitalize }
     def field_filter_regexp_map(args)
       args.each do |re,filters|
-        [filters].flatten.each do |filter|
-          next unless respond_to?("filter_#{filter}".intern)
-          @form.keys.select {|key| key =~ re}.each do |match|
-            # If a key has multiple elements, apply filter to each element
-            if [@form[match]].flatten.length > 1
-              @form[match].map!{|e| self.send("filter_#{filter}".intern, e)}
-            else
-              unless @form[match].to_s.empty?
-                @form[match] = self.send("filter_#{filter}".intern, @form[match].to_s)
-              end
+        convert_filters(filters) do |filter_method|
+          @form.each_key do |key|
+            if key =~ re
+              @form[key] = apply_filter(@form[key], filter_method)
             end
           end
         end
+      end
+    end
+
+    def convert_filters(filters)
+      [filters].flatten.
+      map    {|filter| "filter_#{filter}".intern}.
+      select {|filter_method| respond_to?(filter_method) }.
+      each   {|filter_method|
+        yield(filter_method)
+      }
+    end
+
+    def apply_filter(field_val, filter_method)
+      if field_val === Array
+        field_val.map!{|e| send(filter_method, e) }
+      elsif !field_val.to_s.empty?
+        send(filter_method, field_val.to_s)
       end
     end
 
