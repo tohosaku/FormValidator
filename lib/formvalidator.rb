@@ -533,25 +533,22 @@ class FormValidator
     # Valid constraint objects are String, Hash, Array, Proc, and Regexp.
     def do_constraint(key, constraints)
       constraints.each do |constraint|
-        type = constraint.class.to_s.intern
-        case type
-          when :String
+        case constraint
+          when String
             apply_string_constraint(key, constraint)
-          when :Hash
+          when Hash
             apply_hash_constraint(key, constraint)
-          when :Proc
+          when Proc
             apply_proc_constraint(key, constraint)
-          when :Regexp
-            apply_regexp_constraint(key, constraint) 
+          when Regexp
+            apply_regexp_constraint(key, constraint)
         end
       end
     end
 
     # Delete empty fields.
     def delete_empty
-      @form.keys.each do |key|
-        @form.delete(key) if @form[key].to_s.empty?
-      end
+      @form.reject!{|key,val| val.to_s.empty?}
     end
 
      # Find unknown fields and delete them from the form.
