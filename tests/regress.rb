@@ -402,7 +402,21 @@ class TestValidator < Test::Unit::TestCase
 
     @fv.validate(form, profile)
     assert_equal(["field"], @fv.invalid.keys)
-   end
+
+    form = {
+      "field" => [ 3, 4]
+    }
+
+    profile = {
+      :required => [:field],
+      :constraints => {
+        :field => proc{|n| n.to_i[0].zero?}
+      }
+    }
+
+    @fv.validate(form, profile)
+    assert_equal(["field"], @fv.invalid.keys)
+  end
 
   def test_filter_strip()
     assert_equal("testing", @fv.filter_strip("  testing  "))
