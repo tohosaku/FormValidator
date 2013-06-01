@@ -532,14 +532,24 @@ class FormValidator
     def do_constraint(key, constraints)
       constraints.each do |constraint|
         case constraint
-          when String
-            apply_string_constraint(key, constraint)
-          when Hash
-            apply_hash_constraint(key, constraint)
-          when Proc
-            apply_proc_constraint(key, constraint)
-          when Regexp
-            apply_regexp_constraint(key, constraint)
+        when String
+          # Applies a builtin constraint to form[key]
+          apply_constraint(@form[key], key, constraint) do |val|
+            self.send("match_#{constraint}".intern, val)
+          end
+        when Proc
+          # applies a proc constraint to form[key]
+          apply_constraint(@form[key], key, constraint.inspect) do |val|
+            constraint.call(val)
+          end
+        when Regexp
+          # Applies regexp constraint to form[key]
+          apply_constraint(@form[key], key, constraint.inspect) do |val|
+            m = constraint.match(val)
+            m && m[0]
+          end
+        when Hash
+          apply_hash_constraint(key, constraint)
         end
       end
     end
@@ -561,44 +571,6 @@ class FormValidator
       @untaint_all || @untaint_fields.include?(key)
     end
 
-    # Applies a builtin constraint to form[key]
-    def apply_string_constraint(key, constraint)
-      ### New code to handle multiple elements (beware!)
-      if Array(@form[key]).length > 1
-        Array(@form[key]).each_with_index do |value,index|
-          res = self.send("match_#{constraint}".intern, @form[key][index].to_s)
-          do_apply_array_constraint(res, key, index, constraint)
-        end
-      ### End new code
-      else
-        res = self.send("match_#{constraint}".intern, @form[key].to_s)
-        do_apply_constraint(res, key, constraint)
-      end
-    end
-
-    # Applies regexp constraint to form[key]
-    def apply_regexp_constraint(key, constraint)
-      ### New code to handle multiple elements (beware!)
-      if Array(@form[key]).length > 1
-        Array(@form[key]).each_with_index do |value, index|
-          m = constraint.match(@form[key][index].to_s)
-          res = m && m[0]
-          do_apply_array_constraint(res, key, index, constraint.inspect)
-        end
-      ### End new code
-      else
-        m = constraint.match(@form[key].to_s)
-        res = m && m[0]
-        do_apply_constraint(res, key, constraint.inspect)
-      end
-    end
-
-    # applies a proc constraint to form[key]
-    def apply_proc_constraint(key, constraint)
-      res = constraint.call(@form[key])
-      do_apply_constraint(res, key, constraint.inspect)
-    end
-
     # A hash allows you to send multiple arguments to a constraint.
     # constraint can be a builtin constraint, regexp, or a proc object.
     # params is a list of form fields to be fed into the constraint or proc.
@@ -609,48 +581,61 @@ class FormValidator
       action   = constraint["constraint"]
       params   = constraint["params"]
       res      = false
-      skip_end = false
 
+      arg = params && params.map {|m| @form[m]}
       # In order to call a builtin or proc, params and action must be present.
-      if action and params
-        arg = params.map {|m| @form[m]}
-        if String === action
-          res = self.send("match_#{action}".intern, *arg)
-        elsif Proc === action
-          res = action.call(*arg)
+      case action
+      when String
+        res = arg && self.send("match_#{action}".intern, *arg)
+        do_apply_constraint(res, key, constraint, name)
+      when Proc
+        res = arg && action.call(*arg)
+        do_apply_constraint(res, key, constraint, name)
+      when Regexp
+        apply_constraint(@form[key], key, constraint, name) do |val|
+          m = action.match(val)
+          m && m[0]
         end
       end
+    end
 
-      if Regexp === action
-        ### New code to handle multiple elements (beware!)
-        if Array(@form[key]).length > 1
-          skip_end = true
-          Array(@form[key]).each_with_index do |value,index|
-            m = action.match(value)
-            res = m[0] if m
-            if res
-              @form[key][index] = res if untaint?(key)
-            else
-              @form[key].delete_at(index)
-              constraint = (name) ? name : constraint
-              add_to_invalid(key, constraint)
-            end
-          end
-        ### End new code
-        else
-          m = action.match(@form[key].to_s)
-          res = m[0] if m
+    def apply_constraint(param, key, constraint, name = nil)
+      ### New code to handle multiple elements (beware!)
+      if Array(param).length > 1
+        Array(param).each_with_index do |value, index|
+          res = yield(param[index].to_s)
+          do_apply_array_constraint(res, key, index, constraint, name)
         end
+      ### End new code
+      else
+        res = yield(param.to_s)
+        do_apply_constraint(res, key, constraint, name)
       end
+    end
 
-      if not skip_end
-        if res
-          @form[key] = res if untaint?(key)
-        else
-          @form.delete(key)
-          constraint = (name) ? name : constraint
-          add_to_invalid(key, constraint)
+    def do_apply_constraint(res, key, constraint, name = nil)
+      if res
+        if untaint?(key)
+          @form[key] = res
+          @form[key].untaint
         end
+      else
+        @form.delete(key)
+        constraint = name || constraint
+        add_to_invalid(key, constraint)
+      end
+    end
+
+    def do_apply_array_constraint(res, key, index, constraint, name = nil)
+      if res
+        if untaint?(key)
+          @form[key][index] = res
+          @form[key][index].untaint
+        end
+      else
+        @form[key].delete_at(index)
+        constraint = name || constraint
+        add_to_invalid(key, constraint)
       end
     end
 
@@ -660,30 +645,6 @@ class FormValidator
         @invalid_fields[key].push(constraint)
       end
       nil
-    end
-
-    def do_apply_array_constraint(res, key, index, constraint)
-      if res
-        if untaint?(key)
-          @form[key][index] = res
-          @form[key][index].untaint
-        end
-      else
-        @form[key].delete_at(index)
-        add_to_invalid(key, constraint)
-      end
-    end
-
-    def do_apply_constraint(res, key, constraint)
-      if res
-        if untaint?(key)
-          @form[key] = res
-          @form[key].untaint
-        end
-      else
-        @form.delete(key)
-        add_to_invalid(key, constraint)
-      end
     end
   end # module ConstraintHelpers
 

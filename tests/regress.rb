@@ -297,6 +297,46 @@ class TestValidator < Test::Unit::TestCase
     assert_equal(false, form["ip"].tainted?)
   end
 
+  def test_untaint_all_constraint_fields_and_hash_constraint
+    form = {
+      "field" => "123"
+    }
+    form["field"].taint
+    assert_equal(true, form["field"].tainted?)
+    profile = {
+      :optional => :field,
+      :untaint_all_constraints => true,
+      :constraints => {
+        :field => {
+                    :name => :pure_digit,
+                    :constraint => /\d+/
+                  }
+        }
+      }
+    @fv.validate(form, profile)
+    assert_equal(false, form["field"].tainted?)
+  end
+
+   def test_untaint_constraint_fields_and_hash_constraint
+    form = {
+      "field" => "123"
+    }
+    form["field"].taint
+    assert_equal(true, form["field"].tainted?)
+    profile = {
+      :optional => :field,
+      :untaint_constraint_fields => :field,
+      :constraints => {
+        :field => {
+                    :name => :pure_digit,
+                    :constraint => /\d+/
+                  }
+        }
+      }
+    @fv.validate(form, profile)
+    assert_equal(false, form["field"].tainted?)
+  end
+
   def test_hash_constructor
     profile = {
       :test => {
