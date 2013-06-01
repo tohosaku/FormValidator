@@ -220,9 +220,7 @@ class FormValidator
     # See if an already loaded profile has been modified.
     return if @profiles and @profiles_mtime <= mtime
     # Eval to turn it into a hash.
-    fh = File.open(file)
-    @profiles = eval(fh.read)
-    fh.close
+    @profiles = eval(File.read(file))
     # Die if it's not a hash.
     raise "Input profiles didn't return a Hash" unless Hash === @profiles
     @profiles_mtime = mtime
@@ -567,40 +565,14 @@ class FormValidator
     def apply_string_constraint(key, constraint)
       ### New code to handle multiple elements (beware!)
       if Array(@form[key]).length > 1
-        index = 0
-        Array(@form[key]).each do |value|
+        Array(@form[key]).each_with_index do |value,index|
           res = self.send("match_#{constraint}".intern, @form[key][index].to_s)
-          if res
-            if untaint?(key)
-              @form[key][index] = res
-              @form[key][index].untaint
-            end
-          else
-            @form[key].delete_at(index)
-            @invalid_fields[key] ||= []
-            unless @invalid_fields[key].include?(constraint)
-              @invalid_fields[key].push(constraint) 
-            end
-            nil
-          end
-          index += 1
+          do_apply_array_constraint(res, key, index, constraint)
         end
       ### End new code
       else
         res = self.send("match_#{constraint}".intern, @form[key].to_s)
-        if res
-          if untaint?(key)
-            @form[key] = res 
-            @form[key].untaint
-          end
-        else
-          @form.delete(key)
-          @invalid_fields[key] ||= []
-          unless @invalid_fields[key].include?(constraint)
-            @invalid_fields[key].push(constraint) 
-          end
-          nil
-        end
+        do_apply_constraint(res, key, constraint)
       end
     end
 
@@ -608,58 +580,23 @@ class FormValidator
     def apply_regexp_constraint(key, constraint)
       ### New code to handle multiple elements (beware!)
       if Array(@form[key]).length > 1
-        index = 0
-        Array(@form[key]).each do |value|
+        Array(@form[key]).each_with_index do |value, index|
           m = constraint.match(@form[key][index].to_s)
-          if m
-            if untaint?(key)
-              @form[key][index] = m[0]
-              @form[key][index].untaint
-            end
-          else
-            @form[key].delete_at(index)
-            @invalid_fields[key] ||= []
-            unless @invalid_fields[key].include?(constraint.inspect)
-              @invalid_fields[key].push(constraint.inspect)
-            end
-            nil
-          end
-          index += 1
+          res = m && m[0]
+          do_apply_array_constraint(res, key, index, constraint.inspect)
         end
       ### End new code
       else
         m = constraint.match(@form[key].to_s)
-        if m
-          if untaint?(key)
-            @form[key] = m[0]
-            @form[key].untaint
-          end
-        else
-          @form.delete(key)
-          @invalid_fields[key] ||= []
-          unless @invalid_fields[key].include?(constraint.inspect)
-            @invalid_fields[key].push(constraint.inspect)
-          end
-          nil
-        end
+        res = m && m[0]
+        do_apply_constraint(res, key, constraint.inspect)
       end
     end
 
     # applies a proc constraint to form[key]
     def apply_proc_constraint(key, constraint)
-      if res = constraint.call(@form[key])
-        if untaint?(key)
-          @form[key] = res 
-          @form[key].untaint
-        end
-      else
-        @form.delete(key)
-        @invalid_fields[key] ||= []
-        unless @invalid_fields[key].include?(constraint.inspect)
-          @invalid_fields[key].push(constraint.inspect)
-        end
-        nil
-      end
+      res = constraint.call(@form[key])
+      do_apply_constraint(res, key, constraint.inspect)
     end
 
     # A hash allows you to send multiple arguments to a constraint.
@@ -687,9 +624,8 @@ class FormValidator
       if Regexp === action
         ### New code to handle multiple elements (beware!)
         if Array(@form[key]).length > 1
-          index = 0
           skip_end = true
-          Array(@form[key]).each do |value|
+          Array(@form[key]).each_with_index do |value,index|
             m = action.match(value)
             res = m[0] if m
             if res
@@ -697,13 +633,8 @@ class FormValidator
             else
               @form[key].delete_at(index)
               constraint = (name) ? name : constraint
-              @invalid_fields[key] ||= []
-              unless @invalid_fields[key].include?(constraint)
-                @invalid_fields[key].push(constraint) 
-              end
-              nil
+              add_to_invalid(key, constraint)
             end
-            index += 1
           end
         ### End new code
         else
@@ -718,12 +649,40 @@ class FormValidator
         else
           @form.delete(key)
           constraint = (name) ? name : constraint
-          @invalid_fields[key] ||= []
-          unless @invalid_fields[key].include?(constraint)
-            @invalid_fields[key].push(constraint) 
-          end
-          nil
+          add_to_invalid(key, constraint)
         end
+      end
+    end
+
+    def add_to_invalid(key, constraint)
+      @invalid_fields[key] ||= []
+      unless @invalid_fields[key].include?(constraint)
+        @invalid_fields[key].push(constraint)
+      end
+      nil
+    end
+
+    def do_apply_array_constraint(res, key, index, constraint)
+      if res
+        if untaint?(key)
+          @form[key][index] = res
+          @form[key][index].untaint
+        end
+      else
+        @form[key].delete_at(index)
+        add_to_invalid(key, constraint)
+      end
+    end
+
+    def do_apply_constraint(res, key, constraint)
+      if res
+        if untaint?(key)
+          @form[key] = res
+          @form[key].untaint
+        end
+      else
+        @form.delete(key)
+        add_to_invalid(key, constraint)
       end
     end
   end # module ConstraintHelpers
