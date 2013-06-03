@@ -531,6 +531,11 @@ class TestValidator < Test::Unit::TestCase
     assert_nil(@fv.match_email("whitton"))
   end
 
+  def test_match_email2()
+    assert_equal("jcs@jcs-gifu.co.jp", @fv.match_email("jcs@jcs-gifu.co.jp"))
+    assert_nil(@fv.match_email("jcs"))
+  end
+
   def test_match_state_or_province()
     assert_equal("FL", @fv.match_state_or_province(:FL))
     assert_equal("AB", @fv.match_state_or_province(:AB))
