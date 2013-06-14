@@ -638,11 +638,15 @@ class TestValidator < Test::Unit::TestCase
     profile = {
       :result_symbol => true,
       :field_groups => {
-        :tel => [:tel1, :tel2, :tel3]
+        :tel => [:tel1, :tel2, :tel3],
+        :fax => [:fax1, :fax2, :fax3]
       },
       :required  => [:tel, :address ],
+      :optional  => [:fax],
       :constraints => {
-        :address => :email
+        :address => :email,
+        #:tel     => proc{|n| n.all?{|e| e =~ /^\d+$/}}
+        :tel     => /^\d+$/
       },
       :msgs         => {
         :prefix  => "err_",
@@ -664,6 +668,6 @@ class TestValidator < Test::Unit::TestCase
 
     fv.validate(params2, profile)
     assert_equal([:tel3] , fv.missing)
-    assert_equal({:address => ["email"]} , fv.invalid)
+    assert_equal({:address => ["email"], :tel => ["tel"] } , fv.invalid)
   end
 end

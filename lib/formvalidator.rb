@@ -555,7 +555,11 @@ class FormValidator
     def constraints(args)
       return nil unless Hash === args
       args.each do |key,constraint|
-        do_constraint(key, [constraint].flatten) unless @form[key.to_s].to_s.empty?
+        if !@form[key.to_s].to_s.empty?
+          do_constraint(key, [constraint].flatten)
+        elsif @field_groups[key.to_s]
+          do_group_constraint(key, @field_groups[key.to_s], [constraint].flatten)
+        end
       end
     end
   end # module InputProfile
@@ -584,6 +588,29 @@ class FormValidator
           end
         when Hash
           apply_hash_constraint(key, constraint)
+        end
+      end
+    end
+
+    def do_group_constraint(key, fields, constraints)
+      args = fields.map{|f| @form[f]}
+      constraints.each do |action|
+        case action
+        when String
+          res  = args && self.send("match_#{action}".intern, *args)
+          do_apply_constraint(res, key, action)
+        when Proc
+          res = args && action.call(args)
+          do_apply_constraint(res, key, key)
+        when Regexp
+          res = false
+          res = fields.all? do |f|
+            [@form[f]].flatten.all? do |val|
+              m = action.match(val)
+              m && m[0]
+            end
+          end
+          do_apply_constraint(res, key, key)
         end
       end
     end
