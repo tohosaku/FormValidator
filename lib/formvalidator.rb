@@ -598,10 +598,10 @@ class FormValidator
         case action
         when String
           res  = args && self.send("match_#{action}".intern, *args)
-          do_apply_constraint(res, key, action)
+          after_apply_constraint(res, key, action)
         when Proc
           res = args && action.call(args)
-          do_apply_constraint(res, key, key)
+          after_apply_constraint(res, key, key)
         when Regexp
           res = false
           res = fields.all? do |f|
@@ -610,7 +610,7 @@ class FormValidator
               m && m[0]
             end
           end
-          do_apply_constraint(res, key, key)
+          after_apply_constraint(res, key, key)
         end
       end
     end
@@ -648,10 +648,10 @@ class FormValidator
       case action
       when String
         res = arg && self.send("match_#{action}".intern, *arg)
-        do_apply_constraint(res, key, constraint, name)
+        after_apply_constraint(res, key, constraint, name)
       when Proc
         res = arg && action.call(*arg)
-        do_apply_constraint(res, key, constraint, name)
+        after_apply_constraint(res, key, constraint, name)
       when Regexp
         apply_constraint(@form[key], key, constraint, name) do |val|
           m = action.match(val)
@@ -665,16 +665,16 @@ class FormValidator
       if Array(param).length > 1
         Array(param).each_with_index do |value, index|
           res = yield(param[index].to_s)
-          do_apply_array_constraint(res, key, index, constraint, name)
+          after_apply_array_constraint(res, key, index, constraint, name)
         end
       ### End new code
       else
         res = yield(param.to_s)
-        do_apply_constraint(res, key, constraint, name)
+        after_apply_constraint(res, key, constraint, name)
       end
     end
 
-    def do_apply_constraint(res, key, constraint, name = nil)
+    def after_apply_constraint(res, key, constraint, name = nil)
       if res
         if untaint?(key)
           @form[key] = res
@@ -687,7 +687,7 @@ class FormValidator
       end
     end
 
-    def do_apply_array_constraint(res, key, index, constraint, name = nil)
+    def after_apply_array_constraint(res, key, index, constraint, name = nil)
       if res
         if untaint?(key)
           @form[key][index] = res
