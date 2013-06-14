@@ -16,6 +16,7 @@ class FormValidator
     :field_filters ,
     :filters ,
     :field_filter_regexp_map ,
+    :field_groups ,
     :required ,
     :required_regexp ,
     :require_some ,
@@ -55,7 +56,7 @@ class FormValidator
 
     if @result_symbol
       @form.each do |key,val|
-        @form[key.intern] = val
+        @form[key.to_sym] = val
         @form.delete(key)
       end
     end
@@ -149,6 +150,7 @@ class FormValidator
     @require_some_fields = [] # Contains require_some fields
     @optional_fields     = [] # Contains optional fields
     @profile             = {} # Contains profile data from wherever it's loaded
+    @field_groups        = {}
 
     if Hash === profile
       @profile = profile
@@ -235,7 +237,7 @@ class FormValidator
         :dependencies, :dependency_groups, :defaults, :filters,
         :field_filters, :field_filter_regexp_map,
         :missing_optional_valid, :validator_packages,
-        :untaint_constraint_fields, :untaint_all_constraints, :msgs, :result_symbol]
+        :untaint_constraint_fields, :untaint_all_constraints, :msgs, :result_symbol, :field_groups]
 
     profile.keys.map do |key|
       unless valid_profile_keys.include?(key)
@@ -247,6 +249,19 @@ class FormValidator
   # This module contains all the valid methods that can be invoked from an
   # input profile. See the method definitions below for more information.
   module InputProfile
+
+    # Takes a Hash
+    #
+    # :field_groups => {
+    #   :fax => [:fax1, :fax2, :fax3]
+    # }
+    #
+    def field_groups(args)
+      args.each do |f,v|
+        @field_groups[f.to_s] = v.map{|e| e.to_s}
+      end
+    end
+
     # Takes an array, symbol, or string.
     #
     # Any fields in this list which are not present in the user input will be
@@ -255,8 +270,17 @@ class FormValidator
     #    :required => [:name, :age, :phone]
     def required(args)
       fields = [args].flatten.map{|e| e.to_s}
-      @required_fields.concat(fields).uniq!
-      @missing_fields.concat(fields.select{|s| @form[s].to_s.empty? })
+      fields2 = []
+      fields.each do |f|
+        if @field_groups[f]
+          fields2.concat(@field_groups[f])
+        else
+          fields2 << f
+        end
+      end
+
+      @required_fields.concat(fields2).uniq!
+      @missing_fields.concat(fields2.select{|s| @form[s].to_s.empty? })
     end
 
     # Takes an array, symbol, or string.
@@ -268,7 +292,17 @@ class FormValidator
     #
     #     :optional => [:name, :age, :phone]
     def optional(args)
-      @optional_fields.concat([args].flatten.map{|e| e.to_s}).uniq!
+      #@optional_fields.concat([args].flatten.map{|e| e.to_s}).uniq!
+      fields = [args].flatten.map{|e| e.to_s}
+      fields.each do |f|
+        if @field_groups[f]
+          @optional_fields.concat(@field_groups[f])
+        else
+          @optional_fields << f
+        end
+      end
+
+      @optional_fields.uniq!
     end
 
     # Takes a regular expression.

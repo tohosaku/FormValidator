@@ -594,4 +594,76 @@ class TestValidator < Test::Unit::TestCase
     assert_equal("192.168.1.1", @fv.match_ip_address("192.168.1.1"))
     assert_nil(@fv.match_ip_address("abc.def.ghi.jkl"))
   end
+
+  def test_field_group_valid()
+    fv = FormValidator.new
+
+    profile = {
+      :result_symbol => true,
+      :field_groups => {
+        :tel => [:tel1, :tel2, :tel3],
+        :fax => [:fax1, :fax2, :fax3]
+      },
+      :required  => [:tel, :address ],
+      :optional  => [:fax],
+      :constraints => {
+        :address => :email
+      },
+      :msgs         => {
+        :prefix  => "err_",
+        :invalid => "invalid value",
+        :missing => "required",
+        :constraints => {
+          :tel1 => "input numeric chars",
+          :tel2 => "input numeric chars",
+          :tel3 => "input numeric chars",
+        }
+      }
+    }
+
+    params1 = {
+      "tel1" => "058",
+      "tel2" => "058",
+      "tel3" => "264",
+      "address" => "jcs@jcs-gifu.co.jp"
+    }
+
+    fv.validate(params1, profile)
+    assert_equal({} , fv.msgs)
+  end
+
+  def test_field_group_invalid()
+    fv = FormValidator.new
+
+    profile = {
+      :result_symbol => true,
+      :field_groups => {
+        :tel => [:tel1, :tel2, :tel3]
+      },
+      :required  => [:tel, :address ],
+      :constraints => {
+        :address => :email
+      },
+      :msgs         => {
+        :prefix  => "err_",
+        :invalid => "invalid value",
+        :missing => "required",
+        :constraints => {
+          :tel1 => "input numeric chars",
+          :tel2 => "input numeric chars",
+          :tel3 => "input numeric chars",
+        }
+      }
+    }
+
+    params2 = {
+      "tel1"    => "aaa",
+      "tel2"    => "058",
+      "address" => "jcs"
+    }
+
+    fv.validate(params2, profile)
+    assert_equal([:tel3] , fv.missing)
+    assert_equal({:address => ["email"]} , fv.invalid)
+  end
 end
