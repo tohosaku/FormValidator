@@ -557,7 +557,7 @@ class FormValidator
       args.each do |key,constraint|
         if !@form[key.to_s].to_s.empty?
           do_constraint(key, [constraint].flatten)
-        elsif @field_groups[key.to_s]
+        elsif @field_groups[key.to_s] && @field_groups[key.to_s].any?{|e| @form[e.to_s] }
           do_group_constraint(key, @field_groups[key.to_s], [constraint].flatten)
         end
       end
