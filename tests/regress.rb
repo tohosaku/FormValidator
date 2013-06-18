@@ -667,7 +667,7 @@ class TestValidator < Test::Unit::TestCase
     }
 
     fv.validate(params2, profile)
-    assert_equal([:tel3] , fv.missing)
+    assert_equal([:tel, :tel3] , fv.missing)
     assert_equal({:address => ["email"], :tel => ["tel"] } , fv.invalid)
   end
 end

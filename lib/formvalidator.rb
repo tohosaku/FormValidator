@@ -271,9 +271,12 @@ class FormValidator
     def required(args)
       fields = [args].flatten.map{|e| e.to_s}
       fields2 = []
+      required_groups = []
+
       fields.each do |f|
         if @field_groups[f]
           fields2.concat(@field_groups[f])
+          required_groups << f
         else
           fields2 << f
         end
@@ -281,6 +284,7 @@ class FormValidator
 
       @required_fields.concat(fields2).uniq!
       @missing_fields.concat(fields2.select{|s| @form[s].to_s.empty? })
+      @missing_fields.concat(required_groups.select{|r| @field_groups[r].any?{|m| @form[m].to_s.empty?}})
     end
 
     # Takes an array, symbol, or string.
