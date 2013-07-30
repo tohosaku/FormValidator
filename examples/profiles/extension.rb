@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 module Filters
   def filter_e_to_o(value)
     value.gsub("e", "o")
