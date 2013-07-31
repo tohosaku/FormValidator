@@ -746,41 +746,47 @@ class FormValidator
     # Extract from its input a valid positive integer number.
     def filter_pos_integer(value)
       value.gsub!(/[^\d+]/, "")
-      value.scan(/\+?\d+/).to_s
+      m = value.scan(/\+?\d+/)
+      m[0].to_s
     end
 
     # Extract from its input a valid negative integer number.
     def filter_neg_integer(value)
       value.gsub!(/[^\d-]/, "")
-      value.scan(/\-?\d+/).to_s
+      m = value.scan(/\-?\d+/)
+      m[0].to_s
     end
 
     # Extract from its input a valid decimal number.
     def filter_decimal(value)
       value.tr!(',', '.')
       value.gsub!(/[^\d.+-]/, "")
-      value.scan(/([-+]?\d+\.?\d*)/).to_s
+      m = value.scan(/([-+]?\d+\.?\d*)/)
+      m.empty? ? "" : m[0].join
     end
 
     # Extract from its input a valid positive decimal number.
     def filter_pos_decimal(value)
       value.tr!(',', '.')
       value.gsub!(/[^\d.+]/, "")
-      value.scan(/(\+?\d+\.?\d*)/).to_s
+      m = value.scan(/(\+?\d+\.?\d*)/)
+      m.empty? ? "" : m[0].join
     end
 
     # Extract from its input a valid negative decimal number.
     def filter_neg_decimal(value)
       value.tr!(',', '.')
       value.gsub!(/[^\d.-]/, "")
-      value.scan(/(-\d+\.?\d*)/).to_s
+      m = value.scan(/(-\d+\.?\d*)/)
+      m.empty? ? "" : m[0].join
     end
 
     # Extract from its input a valid number to express dollars like currency.
     def filter_dollars(value)
       value.tr!(',', '.')
       value.gsub!(/[^\d.+-]/, "")
-      value.scan(/(\d+\.?\d?\d?)/).to_s
+      m = value.scan(/(\d+\.?\d?\d?)/)
+      m.empty? ? "" : m[0].join
     end
 
     # Filters out characters which aren't valid for an phone number. (Only
@@ -950,8 +956,8 @@ class FormValidator
     def match_cc_exp(val)
       matched_month = matched_year = nil
       month, year = val.split("/")
-      return nil if (matched_month = month.scan(/^\d+$/).to_s).empty?
-      return nil if (matched_year = year.scan(/^\d+$/).to_s).empty?
+      return nil if (matched_month = month.scan(/^\d+$/)[0].to_s).empty?
+      return nil if (matched_year = year.scan(/^\d+$/)[0].to_s).empty?
       year = year.to_i
       month = month.to_i
       year += (year < 70) ? 2000 : 1900 if year < 1900
