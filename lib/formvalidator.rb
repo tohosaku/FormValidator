@@ -56,10 +56,11 @@ class FormValidator
     end
 
     if @result_symbol
+      new_form = {}
       @form.each do |key,val|
-        @form[key.to_sym] = val
-        @form.delete(key)
+        new_form[key.intern] = val
       end
+      @form = new_form
     end
 
     !(missing.length > 0 || invalid.length > 0 || unknown.length > 0)
