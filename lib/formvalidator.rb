@@ -285,8 +285,8 @@ class FormValidator
       end
 
       @required_fields.concat(fields2).uniq!
-      @missing_fields.concat(fields2.select{|s| @form[s].to_s.empty? })
-      @missing_fields.concat(required_groups.select{|r| @field_groups[r].any?{|m| @form[m].to_s.empty?}})
+      @missing_fields.concat(fields2.select{|s| blank? @form[s] })
+      @missing_fields.concat(required_groups.select{|r| @field_groups[r].any?{|m| blank? @form[m] }})
     end
 
     # Takes an array, symbol, or string.
@@ -321,7 +321,7 @@ class FormValidator
     def required_regexp(args)
       regexp = Regexp.new(args)
       @required_fields.concat(@form.keys.select{|e| e =~ regexp}).uniq!
-      @missing_fields.concat(@form.keys.select{|e| e =~ regexp && @form[e].to_s.empty?})
+      @missing_fields.concat(@form.keys.select{|e| e =~ regexp && blank?(@form[e])})
     end
 
     # Takes a regular expression.
@@ -348,7 +348,7 @@ class FormValidator
       args.each do |group, condition|
         num_to_require, fields = condition
         @require_some_fields.concat(fields).uniq!
-        enough = fields.select{|f| !@form[f].to_s.empty? }.length
+        enough = fields.select{|f| !blank?(@form[f]) }.length
         unless (enough >= num_to_require)
           @missing_fields << group.to_s
         end
@@ -365,7 +365,7 @@ class FormValidator
       keys_defaulted = []
       args.each do |key,value|
         
-        if @form[key.to_s].to_s.empty?
+        if blank?(@form[key.to_s])
           @form[key.to_s] = value.to_s
           keys_defaulted.push(key)
         end
@@ -394,11 +394,11 @@ class FormValidator
         if deps.is_a?(Hash)
           deps.each do |key, more_deps|
             next unless @form[field.to_s].to_s == key.to_s
-            @missing_fields.concat([more_deps].flatten.select{|d| @form[d.to_s].to_s.empty? }).uniq!
+            @missing_fields.concat([more_deps].flatten.select{|d| blank? @form[d.to_s] }).uniq!
           end
         else
-          unless @form[field].to_s.empty?
-            @missing_fields.concat([deps].flatten.select{|dep| @form[dep.to_s].to_s.empty? }).uniq!
+          unless blank?(@form[field])
+            @missing_fields.concat([deps].flatten.select{|dep| blank? @form[dep.to_s] }).uniq!
           end
         end
       end
@@ -415,7 +415,7 @@ class FormValidator
       return nil unless args.is_a?(Hash)
       args.values.each do |val|
         next unless val.any?{|e| @form[e.to_s] }
-        miss = [val].flatten.select{|dep| @form[dep.to_s].to_s.empty? }
+        miss = [val].flatten.select{|dep| blank? @form[dep.to_s] }
         @missing_fields.concat(miss).uniq!
       end
     end
@@ -479,7 +479,7 @@ class FormValidator
     def apply_filter(field_val, filter_method)
       if field_val === Array
         field_val.map!{|e| send(filter_method, e) }
-      elsif !field_val.to_s.empty?
+      elsif !blank?(field_val)
         send(filter_method, field_val.to_s)
       end
     end
@@ -521,8 +521,8 @@ class FormValidator
       args.each do |re,constraint|
         re = Regexp.new(re)
         @form.keys.select {|key| key =~ re}.each do |match|
-          unless @form[match].to_s.empty?
-            do_constraint(match, [constraint].flatten) 
+          unless blank?(@form[match])
+            do_constraint(match, [constraint].flatten)
           end
         end
       end
@@ -564,7 +564,7 @@ class FormValidator
     def constraints(args)
       return nil unless Hash === args
       args.each do |key,constraint|
-        if !@form[key.to_s].to_s.empty?
+        if !blank?(@form[key.to_s])
           do_constraint(key, [constraint].flatten)
         elsif @field_groups[key.to_s] && @field_groups[key.to_s].any?{|e| @form[e.to_s] }
           do_group_constraint(key, @field_groups[key.to_s], [constraint].flatten)
@@ -626,7 +626,7 @@ class FormValidator
 
     # Delete empty fields.
     def delete_empty
-      @form.reject!{|key,val| val.to_s.empty?}
+      @form.reject!{|key,val| blank?(val)}
     end
 
      # Find unknown fields and delete them from the form.
@@ -671,14 +671,15 @@ class FormValidator
 
     def apply_constraint(param, key, constraint, name = nil)
       ### New code to handle multiple elements (beware!)
-      if Array(param).length > 1
-        Array(param).each_with_index do |value, index|
-          res = yield(param[index].to_s)
+      param_array = [param].flatten
+      if param_array.length > 1
+        param_array.each_with_index do |value, index|
+          res = yield(param_array[index].to_s)
           after_apply_array_constraint(res, key, index, constraint, name)
         end
       ### End new code
       else
-        res = yield(param.to_s)
+        res = yield(param_array[0].to_s)
         after_apply_constraint(res, key, constraint, name)
       end
     end
@@ -992,4 +993,14 @@ class FormValidator
   include Filters
   include Constraints
   include ConstraintHelpers
+
+  private
+
+  def blank?(val)
+    if val
+      val.empty?
+    else
+      true
+    end
+  end
 end
