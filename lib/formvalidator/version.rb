@@ -1,3 +1,3 @@
 class FormValidator
-  VERSION = "0.1.11.pre"
+  VERSION = "0.1.11"
 end
