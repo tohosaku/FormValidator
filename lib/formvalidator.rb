@@ -465,9 +465,12 @@ class FormValidator
     def convert_filters(filters)
       [filters].flatten.
       map    {|filter| "filter_#{filter}".intern}.
-      select {|filter_method| respond_to?(filter_method) }.
       each   {|filter_method|
-        yield(filter_method)
+        if respond_to?(filter_method)
+          yield(filter_method)
+        else
+          raise NoMethodError.new("undefined filter method #{filter_method}")
+        end
       }
     end
 
