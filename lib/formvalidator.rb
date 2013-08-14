@@ -477,7 +477,7 @@ class FormValidator
     end
 
     def apply_filter(field_val, filter_method)
-      if field_val === Array
+      if Array === field_val
         field_val.map!{|e| send(filter_method, e) }
       elsif !blank?(field_val)
         send(filter_method, field_val.to_s)
