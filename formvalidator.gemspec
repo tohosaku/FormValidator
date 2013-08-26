@@ -18,4 +18,5 @@ Gem::Specification.new do |gem|
   gem.rdoc_options  = ["--main", "README.rdoc"]
   gem.extra_rdoc_files = ["README.rdoc"]
   gem.test_files    = %w{tests/regress.rb}
+  gem.add_development_dependency "rspec"
 end

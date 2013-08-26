@@ -101,7 +101,7 @@ class FormValidator
       @invalid_fields
     else
       v = {}
-      @invalid_fields.each{|key,val| v[key.intern] = val }
+      @invalid_fields.each{|key,val| v[key.intern] = val.map{|e| e.intern} }
       v
     end
   end
@@ -132,7 +132,7 @@ class FormValidator
 
     invalid.each do |field, name|
       key    = conf["prefix"] + field.to_s
-      reason = name.map{|c| conf["constraints"][c] || conf["constraints"][field] || conf["invalid"] }.join(conf["invalid_separator"])
+      reason = name.map{|c| conf["constraints"][c.to_s] || conf["constraints"][field.to_s] || conf["invalid"] }.join(conf["invalid_separator"])
       messages[key.intern] = conf["format"] % reason
     end
 
